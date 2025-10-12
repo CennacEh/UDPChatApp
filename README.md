@@ -11,7 +11,8 @@ make
 ```
 Or you can run the g++ command directly
 ```bash
-build src/client.cpp -o client.exe -lws2_32
-build src/server.cpp -o server.exe -lws2_32
+build src/client.cpp -o build/client.exe -lws2_32
+build src/server.cpp -o build/server.exe -lws2_32
 ```
+The code will be compiled inside build folder
 This code is made and tested on Windows 10.
