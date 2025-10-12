@@ -6,6 +6,8 @@ For a Client to connect, the IP is the IP of the device where the Server is host
 ## Build
 Run the build.sh file (For g++ users)
 Or you can run the g++ command
+```bash
 build src/client.cpp -o client.exe -lws2_32
 build src/server.cpp -o server.exe -lws2_32
+```
 This code is made and tested on Windows 10.
