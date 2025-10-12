@@ -5,7 +5,11 @@ Start up Server and Clients can connect to your server, however keep in mind tha
 For a Client to connect, the IP is the IP of the device where the Server is hosted in, for localhost use the ip 127.0.0.1 and port is by default 4218.
 ## Build
 Run the build.sh file (For g++ users)
-Or you can run the g++ command
+Or use make
+```bash
+make
+```
+Or you can run the g++ command directly
 ```bash
 build src/client.cpp -o client.exe -lws2_32
 build src/server.cpp -o server.exe -lws2_32

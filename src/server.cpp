@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #pragma comment(lib, "ws2_32.lib")
+#include <sstream>
 
 
 struct Client {
@@ -15,6 +16,20 @@ struct Client {
 std::vector<Client> clients;
 
 int main() {
+
+    std::string portInput;
+    int port = 4218;
+    std::cout << "Enter port (Leave empty for 4218): " << std::flush;
+    std::getline(std::cin, portInput);
+    if (!portInput.empty()) {
+        std::stringstream ss(portInput);
+        if (ss >> port && ss.eof()) {
+            std::cout << "Port has been set to " << port << std::endl;
+        } else {
+            std::cerr << "Invalid port input, port set to 4218" << std::endl;
+            port = 4218;
+        }
+    }
     WSAData wsa;
     WSAStartup(MAKEWORD(2, 2), &wsa);
 
@@ -23,11 +38,10 @@ int main() {
         std::cerr << "Failed to create socket: " << WSAGetLastError() << std::endl;
         return 1;
     }
-
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(4218);
+    addr.sin_port = htons(port);
 
     if (bind(sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
         std::cerr << "Failed to bind socket: " << WSAGetLastError() << std::endl;
@@ -36,7 +50,7 @@ int main() {
         return 1;
     }
 
-    std::cout << "Server started on port 4218" << std::endl;
+    std::cout << "Server started on port " << port << std::endl;
     char buffer[1024];
     sockaddr_in fromAddr{};
 
