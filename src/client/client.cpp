@@ -1,31 +1,28 @@
+#define WIN32_LEAN_AND_MEAN
+#define NOMINAX
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <iostream>
 #include <string>
 #include <regex>
-#include <winsock2.h>
-#pragma comment(lib, "ws2_32.lib")
-#include <ws2tcpip.h>
 #include <conio.h>
 #include <chrono>
-#include <windows.h>
 #include <thread>
 #include <atomic>
 
+#include "gui.h"
 
 std::string ip;
 std::string name;
 int port = -1;
 bool end = false;
 std::string userBuffer;
+std::vector<std::string> messages;
 
-BOOL WINAPI ConsoleHandler(DWORD signal) {
-    if (signal == CTRL_C_EVENT || signal == CTRL_CLOSE_EVENT || signal == CTRL_LOGOFF_EVENT || signal == CTRL_SHUTDOWN_EVENT) {
-        end = true;
-    }
-    return TRUE;
-}
+SOCKET sock;
+sockaddr_in addr{};
 
-void getMessage(SOCKET sock, sockaddr_in addr) {
-    int counter = 0;
+void getMessage() {
     char mbuffer[1024];
     sockaddr_in fromAddr{};
     int len = sizeof(fromAddr);
@@ -41,8 +38,15 @@ void getMessage(SOCKET sock, sockaddr_in addr) {
     timeout = 0;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
     mbuffer[mess] = '\0';
-    if (mess > 0) {
+    std::string mBufferString = mbuffer;
+    if (mess > 0 && mBufferString != "pong") {
         std::cout << mbuffer << std::endl;
+        messages.push_back(mBufferString);
+        if (messages.size() >= 20) {
+            messages.erase(messages.begin());
+        }
+    } else if (mBufferString == "pong") {
+        messages.push_back("Failed to recieve a message, mixed up with \"pong\"");
     }
 }
 
@@ -52,7 +56,7 @@ std::string getInputNonBlocking() {
         if (ch == '\r') {
             std::string result = userBuffer;
             userBuffer.clear();
-            std::cout << '\n';
+            std::cout << '\n' << std::flush;
             return result;
         } else if (ch == '\b') {
             if (!userBuffer.empty()) {
@@ -92,7 +96,7 @@ void start(bool undefined = false) {
     if (name.empty()) return start(true);
 
 }
-bool tryConnect(SOCKET sock, sockaddr_in addr) {
+bool tryConnect() {
     std::string testMes = "CONNECT:" + name;
     int test = sendto(sock, testMes.c_str(), testMes.length(), 0, (sockaddr*)&addr, sizeof(addr));
     if (test == SOCKET_ERROR) {
@@ -122,7 +126,7 @@ bool tryConnect(SOCKET sock, sockaddr_in addr) {
     return true;
 }
 
-bool ping(SOCKET sock, sockaddr_in addr) {
+bool ping() {
     std::string toSend = "ping";
     int sendm = sendto(sock, toSend.c_str(), toSend.length(), 0, (sockaddr*)&addr, sizeof(addr));
     if (sendm == SOCKET_ERROR) {
@@ -146,7 +150,7 @@ bool ping(SOCKET sock, sockaddr_in addr) {
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
     return true;
 }
-bool sendMessage(std::string msg, SOCKET sock, sockaddr_in addr) {
+bool sendMessageToSer(std::string msg) {
     std::string tosend = "message:" + msg;
     int sendm = sendto(sock, tosend.c_str(), tosend.length(), 0, (sockaddr*)&addr, sizeof(addr));
     if (sendm == SOCKET_ERROR) {
@@ -155,7 +159,7 @@ bool sendMessage(std::string msg, SOCKET sock, sockaddr_in addr) {
     }
     return true;
 }
-bool disconnectme(SOCKET sock, sockaddr_in addr) {
+bool disconnectme() {
     std::string tosend = "disconnectme";
     int sendm = sendto(sock, tosend.c_str(), tosend.length(), 0, (sockaddr*)&addr, sizeof(addr));
     if (sendm == SOCKET_ERROR) {
@@ -172,45 +176,46 @@ int main() {
     WSADATA wsa;
     WSAStartup(MAKEWORD(2, 2), &wsa);
 
-    SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock == INVALID_SOCKET) {
         std::cerr << "Failed to create socket: " << WSAGetLastError() << std::endl;
         return 1;
     }
 
-    sockaddr_in addr{};
     addr.sin_family = AF_INET;
     InetPtonA(AF_INET, ip.c_str(), &addr.sin_addr);
     addr.sin_port = htons(port);
 
-    bool connected = tryConnect(sock, addr);
+    bool connected = tryConnect();
     if (!connected) {
         std::cerr << "Couldn't connect to " << ip << ":" << port << ", try a new IP?" << std::endl;
         return 1;
     }
-    SetConsoleCtrlHandler(ConsoleHandler, TRUE);
     auto last = std::chrono::steady_clock::now();
+    initGui();
     while (true) {
         auto now = std::chrono::steady_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last).count();
-        if (ms >= 5000 && !ping(sock, addr)) {
-            disconnectme(sock, addr);
+        if (ms >= 5000 && !ping()) {
+            disconnectme();
             break;
         }
         if (ms >= 5000) last = now;
         if (end) {
-            disconnectme(sock, addr);
+            disconnectme();
             break;
         }
         std::string toSend = getInputNonBlocking();
-        if (!toSend.empty()) sendMessage(toSend, sock, addr);
+        if (!toSend.empty()) sendMessageToSer(toSend);
         if (ms >= 1000) {
-            getMessage(sock, addr);
+            getMessage();
         }
+        gui();
     }
     std::cout << "Main loop ended! app is shutting down." << std::endl;
+    disconnectme();
+    deinitGui();
     closesocket(sock);
     WSACleanup();
-    SetConsoleCtrlHandler(ConsoleHandler, FALSE);
     return 0;
 }

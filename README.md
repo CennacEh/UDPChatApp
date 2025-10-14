@@ -1,18 +1,22 @@
 # An unsecure UDP chat app!
 
 ## How to use
-Start up Server and Clients can connect to your server, however keep in mind that this will allow any udp request to go through, I'm not even expecting people to use this.
-For a Client to connect, the IP is the IP of the device where the Server is hosted in, for localhost use the ip 127.0.0.1 and port is by default 4218.
+# Server
+Simply run the server.exe file and input a port that will be used, make sure it's not already used by another app!
+# Client
+For a Client to connect, Use the IP of the device where the Server is hosted in, for localhost use the IP `127.0.0.1`, Port is `4218` by default but is changeable!
+Name can be anything but an empty value.
+Keep in mind that this will allow any udp request to go through, I'm not even expecting people to use this.
+I will try to add a thing to prevent that
 ## Build
-Run the build.sh file (For g++ users)
-Or use make
+# Make
 ```bash
 make
 ```
-Or you can run the g++ command directly
+# GNU C++ Compiler (g++)
 ```bash
-build src/client.cpp -o build/client.exe -lws2_32
-build src/server.cpp -o build/server.exe -lws2_32
+build src/client/client.cpp -o build/client.exe -lws2_32
+build src/server/server.cpp -o build/server.exe -lws2_32
 ```
-The code will be compiled inside build folder
-This code is made and tested on Windows 10.
+## Note
+The code will be compiled inside the build folder of the project directory. this only works for Windows 10/11! (Only tested in Windows 10)

@@ -3,7 +3,6 @@
 #include <ws2tcpip.h>
 #include <string>
 #include <vector>
-#pragma comment(lib, "ws2_32.lib")
 #include <sstream>
 
 
@@ -88,7 +87,7 @@ int main() {
             std::string response = "pong";
             sendto(sock, response.c_str(), response.length(), 0, (sockaddr*)&fromAddr, fromlen);
         } else if (msg == "disconnectme") {
-            for (int i = 0; i < clients.size(); i++) {
+            for (size_t i = 0; i < clients.size(); i++) {
                 auto &client = clients[i];
                 if (client.addr.sin_addr.s_addr == fromAddr.sin_addr.s_addr && client.addr.sin_port == fromAddr.sin_port) {
                     clients.erase(clients.begin() + i);
@@ -107,7 +106,7 @@ int main() {
                 std::cout << "Message sent by this user is unknown!" << std::endl;
             } else {
                 for (auto &client : clients) {
-                    std::string sended = senderName + ":" + message;
+                    std::string sended = senderName + ": " + message;
                     sendto(sock, sended.c_str(), sended.length(), 0, (sockaddr*)&client.addr, client.len);
                     std::cout << "Sent " << sended << std::endl;
                 }
