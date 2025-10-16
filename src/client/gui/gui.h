@@ -2,5 +2,5 @@
 
 
 void initGui();
-void gui();
+void renderGui();
 void deinitGui();

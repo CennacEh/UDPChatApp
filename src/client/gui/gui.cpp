@@ -2,7 +2,7 @@
 #include <string>
 #include <iostream>
 
-#include "client.h"
+#include "../main/client.h"
 #include "raylib.h"
 
 void initGui() {
@@ -10,7 +10,7 @@ void initGui() {
     SetTargetFPS(30);
 }
 
-void gui() {
+void renderGui() {
     if (WindowShouldClose()) end = true;
     int key = GetCharPressed();
     while (key > 0) {
