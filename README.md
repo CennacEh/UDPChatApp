@@ -8,10 +8,17 @@ For a Client to connect, Use the IP of the device where the Server is hosted in,
 Name can be anything but an empty value.
 Keep in mind that this will allow any udp request to go through, I'm not even expecting people to use this.
 I will try to add a thing to prevent that.
-You can use the client in either the GUI of the app or Console, to not show console run the file in Terminal with this command.
-```cmd
+You can use the client in either the GUI of the app or Console.
+If you do not want to show the GUI then run this command.
+```bash
 client.exe -nogui
 ```
+If you want to pre-enter the values then you may do this. (Experimental, not 100% completed!)
+```bash
+client.exe -ip <ip address> -port <port> -name <name>
+client.exe -ip 127.0.0.1 -port 4218 -name cennac
+```
+
 ## Build
 ### Make
 ```bash
