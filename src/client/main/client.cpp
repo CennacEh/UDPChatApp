@@ -37,7 +37,7 @@ std::vector<std::string> messages;
 
 bool useGui = true;
 
-int getLastError = SOCKET_ERROR;
+int getLastError = -1;
 
 #ifdef _WIN32
 SOCKET sock;
@@ -70,6 +70,14 @@ sockaddr_in addr{};
 
 void signalHandler(int signalnum) {
     running = false;
+}
+
+void updateErrorCode() {
+    #ifdef _WIN32
+        getLastError = WSAGetLastError();
+    #else
+        getLastError = errno;
+    #endif
 }
 
 void start(bool undefined = false) {
@@ -150,6 +158,7 @@ void startWithArgs(int argc, char* argv[]) {
 bool tryConnect() {
     std::string testMes = "CONNECT:" + name;
     int test = sendto(sock, testMes.c_str(), testMes.length(), 0, (sockaddr*)&addr, sizeof(addr));
+    updateErrorCode();
     if (test == SOCKET_ERROR) {
         std::cerr << "Failed to connect to server!\nError code: " << getLastError << std::endl;
         return false;
@@ -161,6 +170,7 @@ bool tryConnect() {
         sockaddr_in fromAddr{};
         int fromLen = sizeof(fromAddr);
         int recieved = recvfrom(sock, testBuffer, sizeof(testBuffer) - 1, 0, (sockaddr*)&fromAddr, &fromLen);
+        updateErrorCode();
         if (recieved == SOCKET_ERROR) {
             int err = getLastError;
             if (err == WSAETIMEDOUT) std::cerr << "Server did not repond in 5 seconds! Is the server even active?\nError code:" << err << std::endl;
@@ -184,9 +194,10 @@ void getMessage() {
     DWORD timeout = 10;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
     int mess = recvfrom(sock, mbuffer, sizeof(mbuffer) - 1, 0, (sockaddr*)&fromAddr, &len);
+    updateErrorCode();
     if (mess == SOCKET_ERROR) {
         int err = getLastError;
-        if (err != WSAETIMEDOUT) std::cerr << "Message recieve failed!\nError code: " << err << std::endl;
+        if (err != WSAETIMEDOUT) std::cerr << "Message recieve failed!\nError code: " << err << ", " << mess << ", " << mbuffer << std::endl;
         timeout = 0;
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
     }
@@ -208,6 +219,7 @@ void getMessage() {
 bool ping() {
     std::string toSend = "ping";
     int sendm = sendto(sock, toSend.c_str(), toSend.length(), 0, (sockaddr*)&addr, sizeof(addr));
+    updateErrorCode();
     if (sendm == SOCKET_ERROR) {
         std::cerr << "Couldn't ping Server, Error code: " << getLastError << std::endl;
         return false;
@@ -218,6 +230,7 @@ bool ping() {
     sockaddr_in fromAddr{};
     int fromlen = sizeof(fromAddr);
     int recieved = recvfrom(sock, pingBuf, sizeof(pingBuf) - 1, 0, (sockaddr*)&fromAddr, &fromlen);
+    updateErrorCode();
     if (recieved == SOCKET_ERROR) {
         int err = getLastError;
         if (err == WSAETIMEDOUT) std::cerr << "Server did not repond in 5 seconds! Is the server even active?\nError code:" << err << std::endl;
@@ -254,6 +267,7 @@ std::string cinNonBlocking() {
 bool sendMessageToSer(std::string msg) {
     std::string tosend = "message:" + msg;
     int sendm = sendto(sock, tosend.c_str(), tosend.length(), 0, (sockaddr*)&addr, sizeof(addr));
+    updateErrorCode();
     if (sendm == SOCKET_ERROR) {
         std::cerr << "Failed to send message to server.\nError code: " << getLastError << std::endl;
         return false;
@@ -265,7 +279,9 @@ int discoAttempt = 0;
 bool disconnectme() {
     std::string tosend = "disconnectme";
     int sendm = sendto(sock, tosend.c_str(), tosend.length(), 0, (sockaddr*)&addr, sizeof(addr));
+    updateErrorCode();
     if (sendm == SOCKET_ERROR) {
+        updateErrorCode(); 
         if (discoAttempt > 5) {
             std::cerr << "Tried to disconnect 5 times and failed!\nError code: " << getLastError << std::endl;
             return false;
@@ -287,13 +303,10 @@ int main(int argc, char** argv) {
     #ifdef _WIN32
         WSADATA wsa;
         WSAStartup(MAKEWORD(2, 2), &wsa);
-
-        getLastError = WSAGetLastError();
-    #else
-        getLastError = errno;
     #endif
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
+    updateErrorCode();
     if (sock == INVALID_SOCKET) {
         std::cerr << "Couldn't create Socket!\nError code: " << getLastError << std::endl;
         return 1;
@@ -316,6 +329,7 @@ int main(int argc, char** argv) {
     auto last = std::chrono::steady_clock::now();
     if (useGui) initGui();
     while (running) {
+        updateErrorCode(); 
         auto now = std::chrono::steady_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last).count();
         if (ms >= 5000 && !ping()) {
