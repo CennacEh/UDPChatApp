@@ -15,6 +15,7 @@
 
     #define WSAETIMEDOUT ETIMEDOUT 
     #define SOCKET_ERROR -1
+    #define INVALID_SOCKET -1
 #endif
 #include <iostream>
 #include <string>
@@ -164,8 +165,15 @@ bool tryConnect() {
         return false;
     } else {
         std::cout << "Connecting to server!" << std::endl;
-        DWORD timeout = 5000;
-        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+        #ifdef _WIN32
+            DWORD timeout = 5000;
+            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+        #else
+            struct timeval timeout;
+            timeout.tv_sec = 5;
+            timeout.tv_usec = 0;
+            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        #endif
         char testBuffer[1024];
         sockaddr_in fromAddr{};
         int fromLen = sizeof(fromAddr);
@@ -191,18 +199,39 @@ void getMessage() {
     char mbuffer[1024];
     sockaddr_in fromAddr{};
     int len = sizeof(fromAddr);
-    DWORD timeout = 10;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+    #ifdef _WIN32
+        DWORD timeout = 5000;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+    #else
+        struct timeval timeout;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 10*1000;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    #endif
     int mess = recvfrom(sock, mbuffer, sizeof(mbuffer) - 1, 0, (sockaddr*)&fromAddr, &len);
     updateErrorCode();
     if (mess == SOCKET_ERROR) {
         int err = getLastError;
         if (err != WSAETIMEDOUT) std::cerr << "Message recieve failed!\nError code: " << err << ", " << mess << ", " << mbuffer << std::endl;
-        timeout = 0;
-        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+        #ifdef _WIN32
+            DWORD timeout = 0;
+            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+        #else
+            struct timeval timeout;
+            timeout.tv_sec = 0;
+            timeout.tv_usec = 0;
+            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        #endif
     }
-    timeout = 0;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+    #ifdef _WIN32
+        DWORD timeout = 5000;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+    #else
+        struct timeval timeout;
+        timeout.tv_sec = 5;
+        timeout.tv_usec = 0;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    #endif
     mbuffer[mess] = '\0';
     std::string mBufferString = mbuffer;
     if (mess > 0 && mBufferString != "pong") {
@@ -224,8 +253,15 @@ bool ping() {
         std::cerr << "Couldn't ping Server, Error code: " << getLastError << std::endl;
         return false;
     }
+    #ifdef _WIN32
     DWORD timeout = 5000;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+    #else
+        struct timeval timeout;
+        timeout.tv_sec = 5;
+        timeout.tv_usec = 0;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    #endif
     char pingBuf[1024];
     sockaddr_in fromAddr{};
     int fromlen = sizeof(fromAddr);
@@ -238,8 +274,15 @@ bool ping() {
         return false;
     }
     pingBuf[recieved] = '\0';
-    timeout = 0;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+    #ifdef _WIN32
+        DWORD timeout = 0;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+    #else
+        struct timeval timeout;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 0;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    #endif
     return true;
 }
 
