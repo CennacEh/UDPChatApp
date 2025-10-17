@@ -17,6 +17,7 @@
     #define SOCKET_ERROR -1
     #define INVALID_SOCKET -1
 #endif
+#define EWOULDBLOCK 11
 #include <iostream>
 #include <string>
 #include <regex>
@@ -212,7 +213,10 @@ void getMessage() {
     updateErrorCode();
     if (mess == SOCKET_ERROR) {
         int err = getLastError;
-        if (err != WSAETIMEDOUT) std::cerr << "Message recieve failed!\nError code: " << err << ", " << mess << ", " << mbuffer << std::endl;
+        if (err != WSAETIMEDOUT && err != EWOULDBLOCK) {
+            std::cerr << "Message recieve failed!\nError code: " << err << ", " << mess << ", " << mbuffer << std::endl;
+            return;
+        }
         #ifdef _WIN32
             timeout = 0;
             setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
