@@ -290,12 +290,12 @@ bool ping() {
 std::string cinNonBlocking() {
     if (_kbhit()) {
         char ch = _getch();
-        if (ch == '\r') {
+        if (ch == '\r' || ch == '\n') {
             std::string result = userBuffer;
             userBuffer.clear();
             std::cout << '\n' << std::flush;
             return result;
-        } else if (ch == '\b') {
+        } else if (ch == '\b' || ch == 127) {
             if (!userBuffer.empty()) {
                 userBuffer.pop_back();
                 std::cout << "\b \b" << std::flush;
