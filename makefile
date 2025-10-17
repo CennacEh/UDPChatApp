@@ -1,6 +1,6 @@
 compiler=g++
 sharedlibraries=-lws2_32
-clientlibs=$(sharedlibraries) -lraylib -lopengl32 -lgdi32 -lwinmm -lglfw3
+clientlibs=$(sharedlibraries) -lraylib -lopengl32 -lgdi32 -lwinmm
 flags=-Wall
 src=./src
 cliento = ./build/client/client.exe

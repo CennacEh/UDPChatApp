@@ -1,11 +1,19 @@
-#define WIN32_LEAN_AND_MEAN
-#define NOMINAX
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #define NOMINAX
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    #include <conio.h>
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <unistd.h>
+    #define SOCKET_ERROR -1
+#endif
 #include <iostream>
 #include <string>
 #include <regex>
-#include <conio.h>
 #include <chrono>
 #include <thread>
 #include <atomic>
@@ -24,7 +32,35 @@ std::vector<std::string> messages;
 
 bool useGui = true;
 
+int getLastError = SOCKET_ERROR;
+
+#ifdef _WIN32
 SOCKET sock;
+
+#else
+int sock;
+
+int _kbhit() {
+    struct timeval tv = {0, 0};
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(STDIN_FILENO, &readfds);
+    return select(STDIN_FILENO + 1, &readfds, NULL, NULL, &tv) == 1;
+}
+
+int _getch() {
+    struct termios oldt, newt;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return ch;
+}
+#endif
+
 sockaddr_in addr{};
 
 void signalHandler(int signalnum) {
@@ -110,7 +146,7 @@ bool tryConnect() {
     std::string testMes = "CONNECT:" + name;
     int test = sendto(sock, testMes.c_str(), testMes.length(), 0, (sockaddr*)&addr, sizeof(addr));
     if (test == SOCKET_ERROR) {
-        std::cerr << "Failed to connect to server!\nError code: " << WSAGetLastError() << std::endl;
+        std::cerr << "Failed to connect to server!\nError code: " << getLastError << std::endl;
         return false;
     } else {
         std::cout << "Connecting to server!" << std::endl;
@@ -121,7 +157,7 @@ bool tryConnect() {
         int fromLen = sizeof(fromAddr);
         int recieved = recvfrom(sock, testBuffer, sizeof(testBuffer) - 1, 0, (sockaddr*)&fromAddr, &fromLen);
         if (recieved == SOCKET_ERROR) {
-            int err = WSAGetLastError();
+            int err = getLastError;
             if (err == WSAETIMEDOUT) std::cerr << "Server did not repond in 5 seconds! Is the server even active?\nError code:" << err << std::endl;
             else std::cerr << "Couldn't get a response from server!\nError code: " << err << std::endl;
             return false;
@@ -144,7 +180,7 @@ void getMessage() {
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
     int mess = recvfrom(sock, mbuffer, sizeof(mbuffer) - 1, 0, (sockaddr*)&fromAddr, &len);
     if (mess == SOCKET_ERROR) {
-        int err = WSAGetLastError();
+        int err = getLastError;
         if (err != WSAETIMEDOUT) std::cerr << "Message recieve failed!\nError code: " << err << std::endl;
         timeout = 0;
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
@@ -168,7 +204,7 @@ bool ping() {
     std::string toSend = "ping";
     int sendm = sendto(sock, toSend.c_str(), toSend.length(), 0, (sockaddr*)&addr, sizeof(addr));
     if (sendm == SOCKET_ERROR) {
-        std::cerr << "Couldn't ping Server, Error code: " << WSAGetLastError() << std::endl;
+        std::cerr << "Couldn't ping Server, Error code: " << getLastError << std::endl;
         return false;
     }
     DWORD timeout = 5000;
@@ -178,7 +214,7 @@ bool ping() {
     int fromlen = sizeof(fromAddr);
     int recieved = recvfrom(sock, pingBuf, sizeof(pingBuf) - 1, 0, (sockaddr*)&fromAddr, &fromlen);
     if (recieved == SOCKET_ERROR) {
-        int err = WSAGetLastError();
+        int err = getLastError;
         if (err == WSAETIMEDOUT) std::cerr << "Server did not repond in 5 seconds! Is the server even active?\nError code:" << err << std::endl;
         else std::cerr << "Couldn't get a response from server!\nError code: " << err << std::endl;
         return false;
@@ -214,7 +250,7 @@ bool sendMessageToSer(std::string msg) {
     std::string tosend = "message:" + msg;
     int sendm = sendto(sock, tosend.c_str(), tosend.length(), 0, (sockaddr*)&addr, sizeof(addr));
     if (sendm == SOCKET_ERROR) {
-        std::cerr << "Failed to send message to server.\nError code: " << WSAGetLastError() << std::endl;
+        std::cerr << "Failed to send message to server.\nError code: " << getLastError << std::endl;
         return false;
     }
     return true;
@@ -226,12 +262,12 @@ bool disconnectme() {
     int sendm = sendto(sock, tosend.c_str(), tosend.length(), 0, (sockaddr*)&addr, sizeof(addr));
     if (sendm == SOCKET_ERROR) {
         if (discoAttempt > 5) {
-            std::cerr << "Tried to disconnect 5 times and failed!\nError code: " << WSAGetLastError() << std::endl;
+            std::cerr << "Tried to disconnect 5 times and failed!\nError code: " << getLastError << std::endl;
             return false;
         }
         disconnectme();
         discoAttempt++;
-        std::cerr << "Failed to disconnect, Trying to disconnect again! Attempt: " << discoAttempt << "\nError code: " << WSAGetLastError() << std::endl;
+        std::cerr << "Failed to disconnect, Trying to disconnect again! Attempt: " << discoAttempt << "\nError code: " << getLastError << std::endl;
     }
     std::cout << "Disconnected from server!" << std::endl;
     return true;
@@ -242,12 +278,19 @@ int main(int argc, char** argv) {
     std::cout << "Client started!" << std::endl;
     if (argc > 1) startWithArgs(argc, argv); else start();
     if (ip == "exit") return 0;
-    WSADATA wsa;
-    WSAStartup(MAKEWORD(2, 2), &wsa);
+
+    #ifdef _WIN32
+        WSADATA wsa;
+        WSAStartup(MAKEWORD(2, 2), &wsa);
+
+        getLastError = WSAGetLastError();
+    #else
+        getLastError = errno;
+    #endif
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock == INVALID_SOCKET) {
-        std::cerr << "Couldn't create Socket!\nError code: " << WSAGetLastError() << std::endl;
+        std::cerr << "Couldn't create Socket!\nError code: " << getLastError << std::endl;
         return 1;
     }
 
@@ -284,7 +327,11 @@ int main(int argc, char** argv) {
     std::cout << "Closing app :D." << std::endl;
     disconnectme();
     if (useGui) deinitGui();
+    #ifdef _WIN32
     closesocket(sock);
     WSACleanup();
+    #else
+    close(sock);
+    #endif
     return 0;
 }
