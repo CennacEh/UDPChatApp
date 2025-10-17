@@ -1,10 +1,18 @@
 compiler=g++
-sharedlibraries=-lws2_32
-clientlibs=$(sharedlibraries) -lraylib -lopengl32 -lgdi32 -lwinmm
 flags=-Wall
-src=./src
-cliento = ./build/client/client.exe
+
+ifeq ($(OS),Windows_NT)
+    sharedlibraries=-lws2_32
+    clientlibs=$(sharedlibraries) -lraylib -lopengl32 -lgdi32 -lwinmm
+    cliento = ./build/client/client.exe
+else
+    sharedlibraries=-lpthread
+    clientlibs=$(sharedlibraries) -lraylib -lGL -lm -ldl -lrt -lX11
+    cliento = ./build/client/client
+endif
+
 servero = ./build/server/server.exe
+src=./src
 clientsources := $(shell find $(src)/client -name "*.cpp")
 clientheaders := $(shell find $(src)/client -name "*.h")
 
