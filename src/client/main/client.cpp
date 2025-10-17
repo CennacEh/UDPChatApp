@@ -214,20 +214,18 @@ void getMessage() {
         int err = getLastError;
         if (err != WSAETIMEDOUT) std::cerr << "Message recieve failed!\nError code: " << err << ", " << mess << ", " << mbuffer << std::endl;
         #ifdef _WIN32
-            DWORD timeout = 0;
+            timeout = 0;
             setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
         #else
-            struct timeval timeout;
             timeout.tv_sec = 0;
             timeout.tv_usec = 0;
             setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
         #endif
     }
     #ifdef _WIN32
-        DWORD timeout = 5000;
+        timeout = 5000;
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
     #else
-        struct timeval timeout;
         timeout.tv_sec = 5;
         timeout.tv_usec = 0;
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
@@ -275,10 +273,9 @@ bool ping() {
     }
     pingBuf[recieved] = '\0';
     #ifdef _WIN32
-        DWORD timeout = 0;
+        timeout = 0;
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
     #else
-        struct timeval timeout;
         timeout.tv_sec = 0;
         timeout.tv_usec = 0;
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
