@@ -14,10 +14,10 @@
     #include <errno.h>
 
     #define WSAETIMEDOUT ETIMEDOUT 
+    #define WSAEWOULDBLOCK EWOULDBLOCK
     #define SOCKET_ERROR -1
     #define INVALID_SOCKET -1
 #endif
-#define EWOULDBLOCK 11
 #include <iostream>
 #include <string>
 #include <regex>
@@ -182,7 +182,7 @@ bool tryConnect() {
         updateErrorCode();
         if (recieved == SOCKET_ERROR) {
             int err = getLastError;
-            if (err == WSAETIMEDOUT) std::cerr << "Server did not repond in 5 seconds! Is the server even active?\nError code:" << err << std::endl;
+            if (err == WSAETIMEDOUT || err == WSAEWOULDBLOCK) std::cerr << "Server did not repond in 5 seconds! Is the server even active?\nError code:" << err << std::endl;
             else std::cerr << "Couldn't get a response from server!\nError code: " << err << std::endl;
             return false;
         }
@@ -213,7 +213,7 @@ void getMessage() {
     updateErrorCode();
     if (mess == SOCKET_ERROR) {
         int err = getLastError;
-        if (err != WSAETIMEDOUT && err != EWOULDBLOCK) {
+        if (err != WSAETIMEDOUT && err != WSAEWOULDBLOCK) {
             std::cerr << "Message recieve failed!\nError code: " << err << ", " << mess << ", " << mbuffer << std::endl;
             return;
         }
@@ -271,7 +271,7 @@ bool ping() {
     updateErrorCode();
     if (recieved == SOCKET_ERROR) {
         int err = getLastError;
-        if (err == WSAETIMEDOUT) std::cerr << "Server did not repond in 5 seconds! Is the server even active?\nError code:" << err << std::endl;
+        if (err == WSAETIMEDOUT || err == WSAEWOULDBLOCK) std::cerr << "Server did not repond in 5 seconds! Is the server even active?\nError code:" << err << std::endl;
         else std::cerr << "Couldn't get a response from server!\nError code: " << err << std::endl;
         return false;
     }
