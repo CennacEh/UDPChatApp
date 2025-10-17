@@ -5,10 +5,15 @@
     #include <ws2tcpip.h>
     #include <conio.h>
 #else
+    #include <termios.h>
     #include <sys/socket.h>
+    #include <sys/select.h>
     #include <netinet/in.h>
     #include <arpa/inet.h>
     #include <unistd.h>
+    #include <errno.h>
+
+    #define WSAETIMEDOUT ETIMEDOUT 
     #define SOCKET_ERROR -1
 #endif
 #include <iostream>
@@ -295,7 +300,12 @@ int main(int argc, char** argv) {
     }
 
     addr.sin_family = AF_INET;
-    InetPtonA(AF_INET, ip.c_str(), &addr.sin_addr);
+    #ifdef _WIN32
+        InetPtonA(AF_INET, ip.c_str(), &addr.sin_addr);
+    #else
+        inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
+    #endif
+
     addr.sin_port = htons(port);
 
     bool connected = tryConnect();
@@ -328,10 +338,10 @@ int main(int argc, char** argv) {
     disconnectme();
     if (useGui) deinitGui();
     #ifdef _WIN32
-    closesocket(sock);
-    WSACleanup();
+        closesocket(sock);
+        WSACleanup();
     #else
-    close(sock);
+        close(sock);
     #endif
     return 0;
 }
